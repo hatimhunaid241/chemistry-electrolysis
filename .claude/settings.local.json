@@ -7,7 +7,26 @@
       "WebFetch(domain:ollama.com)",
       "Bash(npm install *)",
       "Bash(npx vite *)",
-      "Bash(start npx *)"
+      "Bash(start npx *)",
+      "Skill(update-config)",
+      "Bash(node *)",
+      "WebFetch(domain:uat.myjupas.com)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(git mv *)",
+      "Bash(mv src/experiments/experimentData.js src/experiments/experimentData.jsx)",
+      "Bash(npm run *)",
+      "Bash(echo \"EXIT $?\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(kill %1)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(OUTDIR=\"C:/Users/Hatim/AppData/Local/Temp/claude/C--Users-Hatim-Documents-Hatim-PROGRAMMING-chemistry-electrolysis/eb4d5414-28e2-4247-badd-277ebaa6a37d/scratchpad/shots\" node \"C:/Users/Hatim/AppData/Local/Temp/claude/C--Users-Hatim-Documents-Hatim-PROGRAMMING-chemistry-electrolysis/eb4d5414-28e2-4247-badd-277ebaa6a37d/scratchpad/shot.mjs\")",
+      "Bash(cp \"C:/Users/Hatim/AppData/Local/Temp/claude/C--Users-Hatim-Documents-Hatim-PROGRAMMING-chemistry-electrolysis/eb4d5414-28e2-4247-badd-277ebaa6a37d/scratchpad/shot.mjs\" ./_shot.mjs)",
+      "Bash(OUTDIR=\"C:/Users/Hatim/AppData/Local/Temp/claude/C--Users-Hatim-Documents-Hatim-PROGRAMMING-chemistry-electrolysis/eb4d5414-28e2-4247-badd-277ebaa6a37d/scratchpad/shots\" node ./_shot.mjs)",
+      "Bash(OUTDIR=\"C:/Users/Hatim/AppData/Local/Temp/claude/C--Users-Hatim-Documents-Hatim-PROGRAMMING-chemistry-electrolysis/eb4d5414-28e2-4247-badd-277ebaa6a37d/scratchpad/shots2\" node ./_shot.mjs)",
+      "Bash(rm -f _shot.mjs _shot2.mjs)",
+      "Bash(pkill -f \"vite preview\")",
+      "Bash(npm uninstall *)"
     ]
   }
 }

@@ -1,26 +1,46 @@
-const SYSTEM_PROMPT = `You are an expert HKDSE Chemistry tutor specialising in Electrolysis and Voltaic Cells. Generate exam-quality questions. Always respond with valid JSON only, no markdown, no explanation outside the JSON.`
+const SYSTEM_PROMPT = `You are an expert HKDSE Chemistry tutor specialising in Electrolysis and Voltaic Cells. Generate exam-quality questions. Always respond with valid JSON only — no markdown, no commentary outside the JSON.`
 
 const QUESTION_SCHEMA = `
 Return EXACTLY this JSON shape (no other text):
 {
   "type": "mcq" | "structured",
   "topic": "<topic string>",
-  "difficulty": "easy" | "medium" | "hard",
+  "difficulty": "<the difficulty label given>",
   "question": "<question text>",
   "options": { "A": "...", "B": "...", "C": "...", "D": "..." },   // only for mcq
-  "answer": "<A|B|C|D for mcq, or model answer for structured>",
+  "answer": "<A|B|C|D for mcq, or full model answer for structured>",
   "explanation": "<clear explanation of why the answer is correct>",
   "hints": ["<first hint>", "<second hint>"],
   "parts": [                                                        // only for structured
-    { "part": "a", "question": "...", "marks": 2, "answer": "..." },
-    { "part": "b", "question": "...", "marks": 3, "answer": "..." }
+    { "part": "a", "question": "...", "marks": 2, "answer": "..." }
   ]
 }`
 
-export async function generateQuestion(settings, topic, difficulty, type = 'mixed') {
+// Map a 10..100 difficulty percentage to a concrete complexity instruction.
+function difficultyBrief(pct) {
+  if (pct <= 20) return { label: `${pct}% (very easy)`, brief: 'Very simple, single-step recall or one-step substitution using small round numbers. No multi-stage reasoning.' }
+  if (pct <= 40) return { label: `${pct}% (easy)`, brief: 'Easy. A single clear concept or a one-step calculation with friendly numbers.' }
+  if (pct <= 60) return { label: `${pct}% (standard)`, brief: 'Standard HKDSE Paper 1/2 difficulty. Two linked ideas or a two-step calculation.' }
+  if (pct <= 80) return { label: `${pct}% (hard)`, brief: 'Challenging. Multi-step calculation or reasoning that combines two concepts, with less-friendly numbers.' }
+  return { label: `${pct}% (very hard)`, brief: 'Very hard HKDSE extension. Multi-step, combined-concept reasoning or a calculation requiring several stages and awkward values.' }
+}
+
+/**
+ * generateQuestion(settings, opts)
+ *   opts = { topic, difficulty (10..100 int), lang ('en'|'zh'), type ('mixed'|'mcq'|'structured') }
+ */
+export async function generateQuestion(settings, opts = {}) {
+  const { topic = 'Electrolysis', difficulty = 50, lang = 'en', type = 'mixed' } = opts
   const qType = type === 'mixed' ? (Math.random() > 0.5 ? 'mcq' : 'structured') : type
-  const userPrompt = `Generate one ${difficulty} ${qType} HKDSE Chemistry question about: ${topic}.
-Context: HKDSE level, Hong Kong curriculum. Go deeper if "hard". Include chemical equations where relevant.
+  const { label, brief } = difficultyBrief(difficulty)
+  const langLine = lang === 'zh'
+    ? 'Write ALL natural-language text (question, options, answer, explanation, hints) in Traditional Chinese (Hong Kong register). Keep chemical formulae, half-equations, units and scientific notation in standard notation (e.g. Cu²⁺, 2H₂O → O₂ + 4H⁺ + 4e⁻, 96 500 C mol⁻¹).'
+    : 'Write all text in English.'
+
+  const userPrompt = `Generate one ${qType} HKDSE Chemistry question about: ${topic}.
+Difficulty target: ${label}. ${brief}
+Context: HKDSE level, Hong Kong curriculum. Include balanced chemical/ionic equations where relevant. Randomise any numbers so the question is fresh.
+${langLine}
 ${QUESTION_SCHEMA}`
 
   if (settings.provider === 'gemini') return callGemini(settings, userPrompt)
@@ -30,10 +50,11 @@ ${QUESTION_SCHEMA}`
 }
 
 async function callGemini({ apiKey, model }, prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+  if (!apiKey) throw new Error('Missing Gemini API key')
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
   const body = {
     contents: [{ parts: [{ text: SYSTEM_PROMPT + '\n\n' + prompt }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 1200 },
+    generationConfig: { temperature: 0.8, maxOutputTokens: 1400 },
   }
   const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   if (!res.ok) throw new Error(`Gemini error: ${res.status} ${await res.text()}`)
@@ -43,12 +64,13 @@ async function callGemini({ apiKey, model }, prompt) {
 }
 
 async function callOpenRouter({ apiKey, model }, prompt) {
+  if (!apiKey) throw new Error('Missing OpenRouter API key')
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://chemistry-electrolysis.local',
+      'HTTP-Referer': 'https://hkdse-electrolysis.local',
       'X-Title': 'HKDSE Electrolysis Study Pack',
     },
     body: JSON.stringify({
@@ -57,8 +79,8 @@ async function callOpenRouter({ apiKey, model }, prompt) {
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: prompt },
       ],
-      temperature: 0.7,
-      max_tokens: 1200,
+      temperature: 0.8,
+      max_tokens: 1400,
     }),
   })
   if (!res.ok) throw new Error(`OpenRouter error: ${res.status} ${await res.text()}`)
@@ -79,7 +101,7 @@ async function callOllama({ ollamaUrl, model }, prompt) {
         { role: 'user', content: prompt },
       ],
       stream: false,
-      options: { temperature: 0.7 },
+      options: { temperature: 0.8 },
     }),
   })
   if (!res.ok) throw new Error(`Ollama error: ${res.status} ${await res.text()}`)
@@ -89,11 +111,9 @@ async function callOllama({ ollamaUrl, model }, prompt) {
 }
 
 function parseJSON(text) {
-  // strip markdown code fences if present
   const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
   try { return JSON.parse(clean) }
   catch {
-    // try to extract first { ... } block
     const m = clean.match(/\{[\s\S]*\}/)
     if (m) return JSON.parse(m[0])
     throw new Error('Could not parse AI response as JSON')

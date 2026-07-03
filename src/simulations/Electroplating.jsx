@@ -1,42 +1,37 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
+import { useLang } from '../i18n/LanguageContext'
+import { CV, clearLight, drawBattery, drawWire, drawBeaker, drawElectrode, drawElectron, drawIon, label } from './simTheme'
 
-const W = 700, H = 440
+const W = 700, H = 472
 const BK = { x: 80, y: 120, w: 540, h: 270 }
 const ANODE_X = 210, CATHODE_X = 490
 const ELEC_TOP = 90, ELEC_BOT = 355
-const BAT_CX = 350, BAT_Y = 20
+const BAT_CX = 350, BAT_Y = 20, WIRE_Y = BAT_Y + 13
 
 const METAL_OPTIONS = [
-  { id: 'ag', name: 'Silver (Ag)', ionSym: 'Ag⁺', ionColor: '#e2e8f0', metalColor: '#c0c0c0', solColor: 'rgba(200,200,220,0.1)', electrolyte: 'AgNO₃(aq)' },
-  { id: 'cu', name: 'Copper (Cu)', ionSym: 'Cu²⁺', ionColor: '#f97316', metalColor: '#b45309', solColor: 'rgba(59,130,246,0.15)', electrolyte: 'CuSO₄(aq)' },
-  { id: 'ni', name: 'Nickel (Ni)', ionSym: 'Ni²⁺', ionColor: '#a3e635', metalColor: '#4d7c0f', solColor: 'rgba(163,230,53,0.08)', electrolyte: 'NiSO₄(aq)' },
-  { id: 'cr', name: 'Chromium (Cr)', ionSym: 'Cr³⁺', ionColor: '#67e8f9', metalColor: '#155e75', solColor: 'rgba(103,232,249,0.08)', electrolyte: 'CrSO₄(aq)' },
+  { id: 'ag', name: { en: 'Silver (Ag)', zh: '銀 (Ag)' }, sym: 'Ag', ionSym: 'Ag⁺', ionColor: '#a3a3a3', metalColor: '#9ca3af', solColor: 'rgba(148,163,184,0.12)', electrolyte: 'AgNO₃(aq)' },
+  { id: 'cu', name: { en: 'Copper (Cu)', zh: '銅 (Cu)' }, sym: 'Cu', ionSym: 'Cu²⁺', ionColor: '#f97316', metalColor: '#b45309', solColor: 'rgba(37,99,235,0.14)', electrolyte: 'CuSO₄(aq)' },
+  { id: 'ni', name: { en: 'Nickel (Ni)', zh: '鎳 (Ni)' }, sym: 'Ni', ionSym: 'Ni²⁺', ionColor: '#84cc16', metalColor: '#4d7c0f', solColor: 'rgba(132,204,22,0.10)', electrolyte: 'NiSO₄(aq)' },
+  { id: 'cr', name: { en: 'Chromium (Cr)', zh: '鉻 (Cr)' }, sym: 'Cr', ionSym: 'Cr³⁺', ionColor: '#06b6d4', metalColor: '#155e75', solColor: 'rgba(6,182,212,0.10)', electrolyte: 'Cr₂(SO₄)₃(aq)' },
 ]
-
 const OBJECT_OPTIONS = [
-  { id: 'spoon', name: 'Spoon' },
-  { id: 'ring', name: 'Ring' },
-  { id: 'plate', name: 'Plate' },
+  { id: 'spoon', name: { en: 'Spoon', zh: '匙羹' } },
+  { id: 'ring', name: { en: 'Ring', zh: '戒指' } },
+  { id: 'plate', name: { en: 'Plate', zh: '碟' } },
 ]
 
 function initState() {
-  return {
-    ions: Array.from({ length: 24 }, (_, i) => ({
-      x: 120 + Math.random() * 460, y: 150 + Math.random() * 200,
-      isCation: i < 12, r: 12,
-    })),
-    platingThickness: 0,
-    anodeMass: 100,
-    electrons: [0, 0.33, 0.66].map(p => ({ pos: p })),
-    bubbles: [],
-  }
+  return { ions: Array.from({ length: 24 }, (_, i) => ({ x: 120 + Math.random() * 460, y: 150 + Math.random() * 200, isCation: i < 12, r: 12 })), platingThickness: 0, anodeMass: 100, electrons: [0, 0.33, 0.66].map(p => ({ pos: p })) }
 }
 
-export default function ElectroplatingSim() {
+export default function ElectroplatingSim({ onSample }) {
+  const { t, lang, pick } = useLang()
   const canvasRef = useRef(null)
   const stateRef = useRef(initState())
   const animRef = useRef(null)
   const runRef = useRef(false)
+  const onSampleRef = useRef(onSample)
+  useEffect(() => { onSampleRef.current = onSample }, [onSample])
 
   const [voltage, setVoltage] = useState(6)
   const [current, setCurrent] = useState(1.0)
@@ -45,18 +40,22 @@ export default function ElectroplatingSim() {
   const [metal, setMetal] = useState(METAL_OPTIONS[0])
   const [object, setObject] = useState(OBJECT_OPTIONS[0])
 
-  useEffect(() => {
-    let t
-    if (running) t = setInterval(() => setTime(p => p + 1), 1000)
-    return () => clearInterval(t)
-  }, [running])
-
-  // Faraday calculation
-  const charge = current * time // Coulombs
+  const charge = current * time
   const F = 96500
   const z = metal.id === 'cr' ? 3 : metal.id === 'ag' ? 1 : 2
   const M = { ag: 108, cu: 63.5, ni: 58.7, cr: 52 }[metal.id]
   const massDeposited = ((charge / F) * (M / z)).toFixed(4)
+
+  useEffect(() => {
+    let tm
+    if (running) tm = setInterval(() => setTime(p => p + 1), 1000)
+    return () => clearInterval(tm)
+  }, [running])
+
+  // Emit a data sample whenever time advances while running.
+  useEffect(() => {
+    if (running && time > 0) onSampleRef.current?.({ t: time, mass: +massDeposited, charge: Math.round(charge) })
+  }, [time, running, massDeposited, charge])
 
   const update = useCallback(() => {
     const s = stateRef.current
@@ -67,80 +66,49 @@ export default function ElectroplatingSim() {
       ion.x += (target - ion.x) * 0.01 * spd + (Math.random() - 0.5) * 0.7
       ion.y += (Math.random() - 0.5)
       ion.y = Math.max(BK.y + ion.r + 5, Math.min(BK.y + BK.h - ion.r - 5, ion.y))
-      if (ion.isCation && ion.x > CATHODE_X - 18) {
-        s.platingThickness = Math.min(s.platingThickness + 0.08, 30)
-        respawn(ion)
-      }
-      if (!ion.isCation && ion.x < ANODE_X + 18) {
-        s.anodeMass = Math.max(0, s.anodeMass - 0.03)
-        respawn(ion)
-      }
+      if (ion.isCation && ion.x > CATHODE_X - 18) { s.platingThickness = Math.min(s.platingThickness + 0.08, 30); respawn(ion) }
+      if (!ion.isCation && ion.x < ANODE_X + 18) { s.anodeMass = Math.max(0, s.anodeMass - 0.03); respawn(ion) }
     })
   }, [voltage])
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current; if (!canvas) return
     const ctx = canvas.getContext('2d')
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H)
-
-    drawBat(ctx); drawWires(ctx)
-
-    if (running) {
-      stateRef.current.electrons.forEach(e => {
-        const pt = ePath(e.pos)
-        ctx.beginPath(); ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2); ctx.fillStyle = '#facc15'; ctx.fill()
-      })
-    }
-
-    // Solution
-    ctx.fillStyle = metal.solColor; ctx.fillRect(BK.x + 4, BK.y + 4, BK.w - 8, BK.h - 8)
-    drawBeaker(ctx)
-
-    // Anode (plating metal)
     const s = stateRef.current
-    const anodeFrac = s.anodeMass / 100
-    const anodeH = 20 + anodeFrac * (ELEC_BOT - ELEC_TOP - 20)
-    ctx.fillStyle = metal.metalColor; ctx.fillRect(ANODE_X - 8, ELEC_TOP, 16, anodeH)
-    lbl(ctx, `Anode (+)`, ANODE_X, ELEC_TOP - 22, '#e2e8f0')
-    lbl(ctx, metal.name.split(' ')[0], ANODE_X, ELEC_TOP - 10, '#9ca3af', 10)
+    clearLight(ctx, W, H)
+    drawWire(ctx, [{ x: BAT_CX - 90, y: WIRE_Y }, { x: ANODE_X, y: WIRE_Y }, { x: ANODE_X, y: ELEC_TOP }])
+    drawWire(ctx, [{ x: BAT_CX + 90, y: WIRE_Y }, { x: CATHODE_X, y: WIRE_Y }, { x: CATHODE_X, y: ELEC_TOP }])
+    if (running) s.electrons.forEach(e => { const p = ePath(e.pos); drawElectron(ctx, p.x, p.y) })
+    drawBattery(ctx, BAT_CX, BAT_Y)
 
-    // Cathode (object being plated)
-    ctx.fillStyle = '#4b5563'; ctx.fillRect(CATHODE_X - 8, ELEC_TOP, 16, ELEC_BOT - ELEC_TOP)
-    // Plating layer
-    if (s.platingThickness > 0) {
-      ctx.fillStyle = metal.metalColor
-      ctx.globalAlpha = 0.7
-      ctx.fillRect(CATHODE_X - 8 - s.platingThickness / 2, ELEC_TOP, 16 + s.platingThickness, ELEC_BOT - ELEC_TOP)
-      ctx.globalAlpha = 1
-    }
-    lbl(ctx, `Cathode (−)`, CATHODE_X, ELEC_TOP - 22, '#e2e8f0')
-    lbl(ctx, object.name, CATHODE_X, ELEC_TOP - 10, '#9ca3af', 10)
+    drawBeaker(ctx, BK.x, BK.y, BK.w, BK.h, metal.solColor)
+    const anodeH = 20 + (s.anodeMass / 100) * (ELEC_BOT - ELEC_TOP - 20)
+    drawElectrode(ctx, ANODE_X, ELEC_TOP, ELEC_TOP + anodeH, metal.metalColor, 16)
+    label(ctx, `${t('anode')} (+)`, ANODE_X, ELEC_TOP - 22, CV.textStrong)
+    label(ctx, metal.sym, ANODE_X, ELEC_TOP - 10, CV.textMuted, 10)
 
-    // Ions
-    s.ions.forEach(ion => {
-      ctx.beginPath(); ctx.arc(ion.x, ion.y, ion.r, 0, Math.PI * 2)
-      ctx.fillStyle = ion.isCation ? metal.ionColor : '#818cf8'
-      ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1
-      ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1; ctx.stroke()
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-      ctx.fillText(ion.isCation ? metal.ionSym : 'NO₃⁻', ion.x, ion.y); ctx.textBaseline = 'alphabetic'
-    })
+    drawElectrode(ctx, CATHODE_X, ELEC_TOP, ELEC_BOT, '#64748b', 16)
+    if (s.platingThickness > 0) { ctx.fillStyle = metal.metalColor; ctx.globalAlpha = 0.75; ctx.fillRect(CATHODE_X - 8 - s.platingThickness / 2, ELEC_TOP, 16 + s.platingThickness, ELEC_BOT - ELEC_TOP); ctx.globalAlpha = 1 }
+    label(ctx, `${t('cathode')} (−)`, CATHODE_X, ELEC_TOP - 22, CV.textStrong)
+    label(ctx, pick(object.name), CATHODE_X, ELEC_TOP - 10, CV.textMuted, 10)
 
-    // Labels
-    lbl(ctx, metal.electrolyte, BAT_CX, BK.y + BK.h + 18, '#9ca3af', 13)
-    lbl(ctx, `${metal.name.split(' ')[0]} plating on ${object.name}`, BAT_CX, BK.y + BK.h + 34, '#64748b', 11)
+    s.ions.forEach(ion => drawIon(ctx, ion.x, ion.y, ion.isCation ? metal.ionSym : 'NO₃⁻', ion.isCation ? metal.ionColor : '#818cf8', ion.r))
 
-    // Faraday info box
-    ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.roundRect(10, H - 80, 200, 68, 8); ctx.fill()
-    ctx.strokeStyle = '#334155'; ctx.lineWidth = 1; ctx.stroke()
-    lbl(ctx, '⚗ Faraday Calculations', 110, H - 62, '#94a3b8', 10)
-    lbl(ctx, `Q = ${current}A × ${time}s = ${charge.toFixed(0)} C`, 110, H - 48, '#cbd5e1', 9)
-    lbl(ctx, `n(e⁻) = ${(charge / F).toFixed(5)} mol`, 110, H - 36, '#cbd5e1', 9)
-    lbl(ctx, `Mass deposited = ${massDeposited} g`, 110, H - 22, '#4ade80', 10)
+    label(ctx, metal.electrolyte, BAT_CX, BK.y + BK.h + 18, CV.textStrong, 13)
+    label(ctx, `${metal.sym} ${lang === 'zh' ? '電鍍於' : 'plating on'} ${pick(object.name)}`, BAT_CX, BK.y + BK.h + 34, CV.textMuted, 11)
 
-    lbl(ctx, `${metal.ionSym} → ${metal.name.split(' ')[0]} + ${z}e⁻ (anode dissolves)`, ANODE_X, BK.y + BK.h + 50, '#9ca3af', 10)
-    lbl(ctx, `${metal.ionSym} + ${z}e⁻ → ${metal.name.split(' ')[0]} (deposits)`, CATHODE_X, BK.y + BK.h + 50, '#9ca3af', 10)
-  }, [running, metal, object, current, time, massDeposited])
+    // Faraday info box — centred between the electrodes, clear of the bottom labels.
+    const fbx = 245, fby = BK.y + 8, fbw = 210, fbCx = fbx + fbw / 2
+    ctx.globalAlpha = 0.95; ctx.fillStyle = CV.panel; ctx.beginPath(); ctx.roundRect(fbx, fby, fbw, 70, 8); ctx.fill(); ctx.globalAlpha = 1
+    ctx.strokeStyle = CV.panelStroke; ctx.lineWidth = 1; ctx.stroke()
+    label(ctx, lang === 'zh' ? '⚗ 法拉第計算' : '⚗ Faraday Calculation', fbCx, fby + 17, CV.textStrong, 10)
+    label(ctx, `Q = ${current}A × ${time}s = ${charge.toFixed(0)} C`, fbCx, fby + 33, CV.text, 9)
+    label(ctx, `n(e⁻) = ${(charge / F).toFixed(5)} mol`, fbCx, fby + 47, CV.text, 9)
+    label(ctx, `${lang === 'zh' ? '沉積質量' : 'Mass'} = ${massDeposited} g`, fbCx, fby + 63, '#16a34a', 10)
+
+    label(ctx, `${metal.ionSym} → ${metal.sym} (${lang === 'zh' ? '陽極溶解' : 'anode dissolves'})`, ANODE_X, BK.y + BK.h + 50, CV.textMuted, 10)
+    label(ctx, `${metal.ionSym} + ${z}e⁻ → ${metal.sym}`, CATHODE_X, BK.y + BK.h + 50, CV.textMuted, 10)
+  }, [running, metal, object, current, time, massDeposited, charge, t, lang, pick])
 
   useEffect(() => {
     const loop = () => { if (runRef.current) update(); draw(); animRef.current = requestAnimationFrame(loop) }
@@ -149,34 +117,33 @@ export default function ElectroplatingSim() {
   }, [draw, update])
 
   useEffect(() => { runRef.current = running }, [running])
-
-  const reset = () => { stateRef.current = initState(); setTime(0); setRunning(false); runRef.current = false }
+  const reset = () => { stateRef.current = initState(); setTime(0); setRunning(false); runRef.current = false; onSampleRef.current?.({ reset: true }) }
 
   return (
     <div>
       <canvas ref={canvasRef} width={W} height={H} className="sim-canvas" />
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="card">
-          <label className="text-xs text-gray-400 block mb-2">Plating Metal</label>
-          <select value={metal.id} onChange={e => { setMetal(METAL_OPTIONS.find(m => m.id === e.target.value)); reset() }} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-sm text-gray-300">
-            {METAL_OPTIONS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          <label className="text-xs text-slate-500 block mb-2">{lang === 'zh' ? '電鍍金屬' : 'Plating Metal'}</label>
+          <select value={metal.id} onChange={e => { setMetal(METAL_OPTIONS.find(m => m.id === e.target.value)); reset() }} className="w-full bg-white border border-slate-300 rounded-lg px-2 py-1 text-sm text-slate-700">
+            {METAL_OPTIONS.map(m => <option key={m.id} value={m.id}>{pick(m.name)}</option>)}
           </select>
         </div>
         <div className="card">
-          <label className="text-xs text-gray-400 block mb-2">Object to Plate</label>
-          <select value={object.id} onChange={e => setObject(OBJECT_OPTIONS.find(o => o.id === e.target.value))} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-sm text-gray-300">
-            {OBJECT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+          <label className="text-xs text-slate-500 block mb-2">{lang === 'zh' ? '被鍍物件' : 'Object to Plate'}</label>
+          <select value={object.id} onChange={e => setObject(OBJECT_OPTIONS.find(o => o.id === e.target.value))} className="w-full bg-white border border-slate-300 rounded-lg px-2 py-1 text-sm text-slate-700">
+            {OBJECT_OPTIONS.map(o => <option key={o.id} value={o.id}>{pick(o.name)}</option>)}
           </select>
         </div>
         <div className="card">
-          <label className="text-xs text-gray-400 block mb-2">Current: <span className="text-blue-400 font-bold">{current} A</span></label>
+          <label className="text-xs text-slate-500 block mb-2">{t('current')}: <span className="text-blue-600 font-bold">{current} A</span></label>
           <input type="range" min={0.1} max={5} step={0.1} value={current} onChange={e => setCurrent(+e.target.value)} className="control-slider" />
         </div>
         <div className="card flex gap-2 items-center justify-center">
-          <button onClick={() => setRunning(r => !r)} className={`px-3 py-2 rounded-lg font-semibold text-sm ${running ? 'bg-red-800 hover:bg-red-700' : 'bg-green-700 hover:bg-green-600'} text-white`}>
-            {running ? '⏸ Pause' : '▶ Start'}
+          <button onClick={() => setRunning(r => !r)} className={`px-3 py-2 rounded-lg font-semibold text-sm text-white ${running ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'}`}>
+            {running ? t('btn_pause') : t('btn_start')}
           </button>
-          <button onClick={reset} className="px-3 py-2 rounded-lg font-semibold text-sm bg-gray-700 hover:bg-gray-600 text-white">↺</button>
+          <button onClick={reset} className="px-3 py-2 rounded-lg font-semibold text-sm bg-slate-200 hover:bg-slate-300 text-slate-700">↺</button>
         </div>
       </div>
     </div>
@@ -184,31 +151,10 @@ export default function ElectroplatingSim() {
 }
 
 function respawn(ion) { ion.x = 130 + Math.random() * 440; ion.y = 150 + Math.random() * 200 }
-function ePath(t) {
-  const s1 = ELEC_TOP - (BAT_Y + 13), s2 = CATHODE_X - ANODE_X, s3 = s1
-  const total = s1 + s2 + s3, d = t * total
+function ePath(tt) {
+  const s1 = ELEC_TOP - WIRE_Y, s2 = CATHODE_X - ANODE_X
+  const total = s1 + s2 + s1, d = tt * total
   if (d < s1) return { x: ANODE_X, y: ELEC_TOP - d }
-  if (d < s1 + s2) return { x: ANODE_X + (d - s1), y: BAT_Y + 13 }
-  return { x: CATHODE_X, y: BAT_Y + 13 + (d - s1 - s2) }
-}
-function drawBat(ctx) {
-  ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.roundRect(BAT_CX - 90, BAT_Y, 180, 26, 5); ctx.fill()
-  ctx.strokeStyle = '#475569'; ctx.lineWidth = 1.5; ctx.stroke()
-  ctx.font = 'bold 13px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#ef4444'; ctx.fillText('+', BAT_CX - 82, BAT_Y + 17)
-  ctx.textAlign = 'right'; ctx.fillStyle = '#60a5fa'; ctx.fillText('−', BAT_CX + 82, BAT_Y + 17)
-  ctx.textAlign = 'center'; ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif'; ctx.fillText('DC Power Supply', BAT_CX, BAT_Y + 17)
-}
-function drawWires(ctx) {
-  ctx.strokeStyle = '#475569'; ctx.lineWidth = 2
-  ctx.beginPath(); ctx.moveTo(BAT_CX - 90, BAT_Y + 13); ctx.lineTo(ANODE_X, BAT_Y + 13); ctx.lineTo(ANODE_X, ELEC_TOP); ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(BAT_CX + 90, BAT_Y + 13); ctx.lineTo(CATHODE_X, BAT_Y + 13); ctx.lineTo(CATHODE_X, ELEC_TOP); ctx.stroke()
-}
-function drawBeaker(ctx) {
-  ctx.beginPath()
-  ctx.moveTo(BK.x + 10, BK.y); ctx.lineTo(BK.x + 10, BK.y + BK.h); ctx.lineTo(BK.x + BK.w - 10, BK.y + BK.h); ctx.lineTo(BK.x + BK.w - 10, BK.y)
-  ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 3; ctx.stroke()
-  ctx.beginPath(); ctx.moveTo(BK.x, BK.y); ctx.lineTo(BK.x + BK.w, BK.y); ctx.stroke()
-}
-function lbl(ctx, text, x, y, color = '#9ca3af', size = 12) {
-  ctx.fillStyle = color; ctx.font = `${size}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(text, x, y)
+  if (d < s1 + s2) return { x: ANODE_X + (d - s1), y: WIRE_Y }
+  return { x: CATHODE_X, y: WIRE_Y + (d - s1 - s2) }
 }

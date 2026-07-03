@@ -1,24 +1,28 @@
 import React from 'react'
+import { NavLink } from 'react-router-dom'
+import { useLang } from '../i18n/LanguageContext'
 
 const TABS = [
-  { id: 'lessons', label: 'Lessons', icon: '📚' },
-  { id: 'simulations', label: 'Simulations', icon: '🧪' },
-  { id: 'practice', label: 'Practice', icon: '✏️' },
-  { id: 'settings', label: 'AI Settings', icon: '⚙️' },
+  { to: '/lessons', key: 'nav_lessons', icon: '📚' },
+  { to: '/simulations', key: 'nav_simulations', icon: '🧪' },
+  { to: '/lab', key: 'nav_lab', icon: '🔬' },
+  { to: '/practice', key: 'nav_practice', icon: '✏️' },
+  { to: '/settings', key: 'nav_settings', icon: '⚙️' },
 ]
 
-export default function Navigation({ activeTab, setActiveTab }) {
+export default function Navigation() {
+  const { t } = useLang()
   return (
-    <nav className="flex gap-1">
+    <nav className="flex flex-wrap gap-1">
       {TABS.map(tab => (
-        <button
-          key={tab.id}
-          onClick={() => setActiveTab(tab.id)}
-          className={`tab-btn ${activeTab === tab.id ? 'tab-btn-active' : 'tab-btn-inactive'}`}
+        <NavLink
+          key={tab.to}
+          to={tab.to}
+          className={({ isActive }) => `tab-btn ${isActive ? 'tab-btn-active' : 'tab-btn-inactive'}`}
         >
           <span className="hidden sm:inline">{tab.icon} </span>
-          {tab.label}
-        </button>
+          {t(tab.key)}
+        </NavLink>
       ))}
     </nav>
   )
