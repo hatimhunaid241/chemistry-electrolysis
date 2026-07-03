@@ -66,19 +66,10 @@ export function AppProvider({ children }) {
     })
   }
 
-  const markSimViewed = (simId) => {
-    setProgressState(prev => {
-      if (prev.simsViewed.includes(simId)) return prev
-      const next = { ...prev, simsViewed: [...prev.simsViewed, simId] }
-      saveProgress(next)
-      return next
-    })
-  }
-
   return (
     <AppContext.Provider value={{
       aiSettings, setAISettings,
-      progress, markLessonComplete, recordPractice, markSimViewed,
+      progress, markLessonComplete, recordPractice,
       getDifficulty, setDifficulty, adjustDifficulty,
     }}>
       {children}

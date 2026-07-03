@@ -4,7 +4,6 @@ import Navigation from './components/Navigation'
 import LanguageToggle from './components/LanguageToggle'
 import { useLang } from './i18n/LanguageContext'
 import LessonsTab from './tabs/LessonsTab'
-import SimulationsTab from './tabs/SimulationsTab'
 import PracticeLab from './tabs/PracticeLab'
 import PracticeTab from './tabs/PracticeTab'
 import SettingsTab from './tabs/SettingsTab'
@@ -33,7 +32,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/lessons" replace />} />
           <Route path="/lessons" element={<LessonsTab />} />
-          <Route path="/simulations" element={<SimulationsTab />} />
+          <Route path="/simulations" element={<Navigate to="/lab" replace />} />
           <Route path="/lab" element={<PracticeLab />} />
           <Route path="/practice" element={<PracticeTab />} />
           <Route path="/settings" element={<SettingsTab />} />

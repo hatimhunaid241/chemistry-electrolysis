@@ -9,8 +9,7 @@ export const STRINGS = {
 
   // ---- Navigation ----
   nav_lessons:      { en: 'Lessons', zh: '課堂' },
-  nav_simulations:  { en: 'Simulations', zh: '模擬' },
-  nav_lab:          { en: 'Practice Lab', zh: '練習實驗室' },
+  nav_lab:          { en: 'Experiments', zh: '實驗' },
   nav_practice:     { en: 'AI Practice', zh: 'AI 練習' },
   nav_settings:     { en: 'Settings', zh: '設定' },
 
@@ -46,14 +45,8 @@ export const STRINGS = {
   lessons_done_tag: { en: '✓ Done', zh: '✓ 完成' },
   lessons_best:     { en: 'Best score:', zh: '最佳分數：' },
 
-  // ---- Simulations tab ----
-  sims_title:       { en: 'Interactive Simulations', zh: '互動模擬' },
-  sims_subtitle:    { en: 'Click any simulation to launch it. Use the variable controls to experiment.', zh: '點擊任何模擬以啟動，使用變數控制進行實驗。' },
-  sims_visited:     { en: 'Visited', zh: '已瀏覽' },
-  sims_hint:        { en: '💡 Use the sliders to change variables and observe how the simulation responds. Yellow dots = electrons in the external circuit; coloured circles = ions.', zh: '💡 使用滑桿改變變數，觀察模擬的反應。黃點＝外電路中的電子；彩色圓圈＝離子。' },
-
   // ---- Practice Lab ----
-  lab_title:        { en: 'Practice Lab', zh: '練習實驗室' },
+  lab_title:        { en: 'Experiments', zh: '實驗' },
   lab_subtitle:     { en: 'Every experiment in one place — each with objectives, method, live simulation, data, and a comprehension check.', zh: '所有實驗集於一處 —— 每個都設有目標、方法、即時模擬、數據及理解測驗。' },
   lab_open:         { en: 'Open experiment', zh: '開啟實驗' },
   lab_sec_objective:{ en: 'Objective', zh: '實驗目標' },

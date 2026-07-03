@@ -12,7 +12,6 @@ const DEFAULT_PROGRESS = {
     byTopicCorrect: {},
     byDifficulty: {},
   },
-  simsViewed: [],
 }
 
 // Default provider is OpenRouter with the free Llama 3.2 3B model, per spec.

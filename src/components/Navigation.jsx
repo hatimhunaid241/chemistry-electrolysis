@@ -4,8 +4,7 @@ import { useLang } from '../i18n/LanguageContext'
 
 const TABS = [
   { to: '/lessons', key: 'nav_lessons', icon: '📚' },
-  { to: '/simulations', key: 'nav_simulations', icon: '🧪' },
-  { to: '/lab', key: 'nav_lab', icon: '🔬' },
+  { to: '/lab', key: 'nav_lab', icon: '🧪' },
   { to: '/practice', key: 'nav_practice', icon: '✏️' },
   { to: '/settings', key: 'nav_settings', icon: '⚙️' },
 ]
