@@ -255,9 +255,9 @@ export const EXPERIMENTS = [
     objective: { en: 'To predict electrolysis products from the electrochemical series, ion concentration and electrode type.', zh: '根據電化學序、離子濃度及電極類型預測電解產物。' },
     variables: [{ en: 'Cation and anion present', zh: '存在的陽離子及陰離子' }, { en: 'Concentration', zh: '濃度' }, { en: 'Electrode (inert / active)', zh: '電極（惰性／活性）' }],
     steps: [
-      { en: 'Select the cation and anion in the electrolyte.', zh: '選擇電解質中的陽離子及陰離子。' },
-      { en: 'Set the concentration and electrode type.', zh: '設定濃度及電極類型。' },
-      { en: 'Read off the predicted cathode and anode products and the reasoning.', zh: '讀出預測的陰極及陽極產物及其推理。' },
+      { en: 'Choose the cation (cathode) and anion (anode), then set the concentration and electrode type.', zh: '選擇陽離子（陰極）及陰離子（陽極），再設定濃度及電極類型。' },
+      { en: 'Press Start to power on — the products appear at each electrode and the run is logged in the results table.', zh: '按「開始」通電 —— 各電極出現產物，並將該次結果記錄於結果表。' },
+      { en: 'Change the ions/conditions and Start again to compare takes; press Reset to clear the log.', zh: '改變離子／條件後再按「開始」以比較不同組合；按「重設」清除記錄。' },
     ],
     series: null,
     xLabel: { en: 'Time (s)', zh: '時間 (秒)' },
